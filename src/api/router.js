@@ -21,6 +21,7 @@ router.post('/webhook', (req, res) => {
 
             if (webhook_event.message) {
                 try {
+                    MSG.senderAction(sender_psid,'mark_seen')
                     MSG.handleMessage(sender_psid, webhook_event.message);
                 } catch (error) {
                     // Code to handle the exception

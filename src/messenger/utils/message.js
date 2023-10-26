@@ -1,4 +1,5 @@
 const request = require('request');
+const axios = require('axios');
 const LLM = require('../../models/GPT')
 
 function callSendAPI(sender_psid, response) {
@@ -34,8 +35,10 @@ async function handleMessage(sender_psid, received_message) {
 
     // Check if the message contains text
     if (received_message.text) {
+        senderAction(sender_psid,'typing_on')
         response = await LLM.completions('gpt-3.5-turbo-0613',received_message,sender_psid)
         console.log('res',response)
+        senderAction(sender_psid,'typing_off')
         callSendAPI(sender_psid, response);
     } else if (received_message.attachments) {
         let attachment_url = received_message.attachments[0].payload.url;
@@ -87,8 +90,37 @@ function handlePostback(sender_psid, received_postback) {
     callSendAPI(sender_psid, response);
   }
 
+  function senderAction(sender_psid,action){
+
+    const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
+    
+    const url = `https://graph.facebook.com/v2.6/me/messages?access_token=${PAGE_ACCESS_TOKEN}`;
+    
+    const requestData = {
+      recipient: {
+        id: sender_psid
+      },
+      sender_action: action
+    };
+    
+    axios.post(url, requestData, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+      .then(response => {
+        console.log('Message sent successfully', response.data);
+      })
+      .catch(error => {
+        console.error('Error sending message', error);
+      });
+    
+    }
+
 module.exports = {
     callSendAPI,
     handleMessage,
     handlePostback,
+    senderAction,
 };
+
