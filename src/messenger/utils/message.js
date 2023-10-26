@@ -102,7 +102,7 @@ function handlePostback(sender_psid, received_postback) {
       },
       sender_action: action
     };
-    
+
     axios.post(url, requestData, {
       headers: {
         'Content-Type': 'application/json'
@@ -123,4 +123,5 @@ module.exports = {
     handlePostback,
     senderAction,
 };
+
 

@@ -172,3 +172,4 @@ async function getWikipediaSummary(title, languageCode = 'en') {
 module.exports = {
     completions,
 };
+
