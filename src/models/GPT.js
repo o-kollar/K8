@@ -3,6 +3,7 @@ const request = require('request');
 const utils = require('./utils/readFile');
 const db = require('../db/pouch');
 const axios = require('axios');
+const { callSendAPI } = require('../messenger/utils/api');
 
 async function completions(model, input,userId) {
     let conversationHistory = await db.retrieveHistory(userId);
@@ -46,8 +47,6 @@ async function completions(model, input,userId) {
                     ],
                 };
 
-                console.log(requestBody)
-
                 const options = {
                     method: 'POST',
                     url: 'https://api.naga.ac/v1/chat/completions',
@@ -69,7 +68,9 @@ async function completions(model, input,userId) {
                             if (jsonResponse.choices[0].finish_reason === 'function_call') {
                                 const functionName = jsonResponse.choices[0].message.function_call.name;
                                 const functionArguments = jsonResponse.choices[0].message.function_call.arguments;
-
+                                if(jsonResponse.choices[0].message.content){
+                                    console.log(jsonResponse.choices[0].message.content)
+                                }
                                 if (functionName === 'generate_image') {
                                     try {
                                         const imageurl = await generateImage(functionArguments);
@@ -168,6 +169,33 @@ async function getWikipediaSummary(title, languageCode = 'en') {
         throw error;
     }
 }
+
+async function Embed(content) {
+    const API_URL = 'https://api.naga.ac/v1/embeddings';
+    const API_KEY = 'GtS_5h93ytGx0bFm21dHrubl_6pODJ94fBPnYBKlrc4';
+
+    const data = {
+        input: content,
+        model: 'text-embedding-ada-002',
+        encoding_format: 'float'
+    };
+
+    const headers = {
+        'Authorization': `Bearer ${API_KEY}`,
+        'Content-Type': 'application/json'
+    };
+
+    return axios.post(API_URL, data, { headers })
+        .then(response => {
+            console.log(response.data.data[0].embedding);
+            return response.data.data[0].embedding;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            throw error;
+        });
+}
+
 
 module.exports = {
     completions,

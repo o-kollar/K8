@@ -2,29 +2,40 @@
 const PouchDB = require('pouchdb');
 const axios = require('axios');
 
-function storeHistory(conv,user){
+async function storeHistory(conv, user) {
+    const db = new PouchDB('history');
+    try {
+        // Check if the user's history exists in the database
+        const existingDoc = await db.get(user);
 
-    // Create a new PouchDB database or open an existing one
-const db = new PouchDB('history');
-let lastMessage = `user:${conv.usr},bot:${conv.bot}`
-// Define the note to be stored
-let History = {
-    _id: new Date().toISOString(),
-    userId:user, 
-    conversation: [],
-    
-};
-History.conversation.push(lastMessage)
+        // If the user's history document already exists, update it with the new conversation
+        existingDoc.conversation.push(`user:${conv.usr},bot:${conv.bot}`);
+        if (existingDoc.conversation.length > 15) {
+            // Keep only the last 10 entries
+            existingDoc.conversation = existingDoc.conversation.slice(-15);
+        }
 
-db.put(History)
-    .then((response) => {
-        console.log('Note added:', response);
-    })
-    .catch((error) => {
-        console.error('Error adding note:', error);
-    });
-
+        // Update the document in the database
+        await db.put(existingDoc);
+        console.log('User history updated:', existingDoc);
+    } catch (error) {
+        if (error.status === 404) {
+            // If the user's history document does not exist (status 404), create a new one
+            const newHistory = {
+                _id: user,
+                userId: user,
+                conversation: [`user:${conv.usr},bot:${conv.bot}`],
+            };
+            await db.put(newHistory);
+            console.log('New user history created:', newHistory);
+        } else {
+            console.error('Error updating/creating user history:', error);
+        }
+    }
 }
+
+
+
 
 async function retrieveHistory(user) {
     // Create or open the PouchDB database
@@ -33,7 +44,7 @@ async function retrieveHistory(user) {
 
     try {
         // Use the allDocs method to get all documents
-        const result = await db.allDocs({ include_docs: true, descending: false, limit: 10 });
+        const result = await db.allDocs({ include_docs: true, descending: false, limit: 50 });
 
         // Extract and filter the conversation history based on userId
         const histories = result.rows

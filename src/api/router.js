@@ -1,34 +1,21 @@
-const 
-    express = require('express');
-    router = express.Router();
-    MSG = require('../messenger/utils/message')
-
+const express = require('express');
+router = express.Router();
+MSG = require('../messenger/utils/api');
 
 router.post('/webhook', (req, res) => {
-    // Parse the request body from the POST
     let body = req.body;
-
-    // Check the webhook event is from a Page subscription
     if (body.object === 'page') {
-        // Iterate over each entry - there may be multiple if batched
         body.entry.forEach(function (entry) {
-            // Get the webhook event. entry.messaging is an array, but
-            // will only ever contain one event, so we get index 0
-
             let webhook_event = entry.messaging[0];
             let sender_psid = webhook_event.sender.id;
-            console.log('Sender PSID: ' + sender_psid);
-
-            if (webhook_event.message) {
+             if (webhook_event.message) {
                 try {
-                    MSG.senderAction(sender_psid,'mark_seen')
+                    MSG.senderAction(sender_psid, 'mark_seen');
                     MSG.handleMessage(sender_psid, webhook_event.message);
                 } catch (error) {
-                    // Code to handle the exception
                     console.error('An error occurred:', error);
                 }
             } else if (webhook_event.postback) {
-                console.log(webhook_event)
                 MSG.handlePostback(sender_psid, webhook_event.postback);
             }
         });

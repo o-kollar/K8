@@ -1,35 +1,23 @@
 const axios = require('axios');
 
-async function getWikipediaSummary(title) {
-    try {
-        // Encode the title for the URL
-        const encodedTitle = encodeURIComponent(title);
+const API_URL = 'https://api.naga.ac/v1/embeddings';
+const API_KEY = 'GtS_5h93ytGx0bFm21dHrubl_6pODJ94fBPnYBKlrc4';
 
-        // Define the Wikipedia API URL with the encoded title
-        const apiUrl = `https://en.wikipedia.org/w/api.php?action=query&format=json&prop=extracts&exintro=true&titles=${encodedTitle}`;
+const data = {
+  input: 'The food was delicious and the waiter...',
+  model: 'text-embedding-ada-002',
+  encoding_format: 'float'
+};
 
-        // Make the API request to Wikipedia
-        const response = await axios.get(apiUrl);
+const headers = {
+  'Authorization': `Bearer ${API_KEY}`,
+  'Content-Type': 'application/json'
+};
 
-        const page = Object.values(response.data.query.pages)[0];
-
-        if (page.extract) {
-            // Return the summary (extract) of the Wikipedia page
-            return page.extract;
-        } else {
-            return "No information found for the title.";
-        }
-    } catch (error) {
-        console.error('Error querying Wikipedia API:', error);
-        throw error;
-    }
-}
-
-// Usage example:
-getWikipediaSummary('Robert Fico')
-    .then((summary) => {
-        console.log('Wikipedia Summary:', summary);
-    })
-    .catch((error) => {
-        console.error('Error:', error);
-    });
+axios.post(API_URL, data, { headers })
+  .then(response => {
+    console.log(response.data.data[0].embedding);
+  })
+  .catch(error => {
+    console.error('Error:', error);
+  });
