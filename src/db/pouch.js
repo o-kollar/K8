@@ -34,6 +34,25 @@ async function storeHistory(conv, user) {
     }
 }
 
+async function deleteEntriesForUser(userId) {
+    const db = new PouchDB('history');
+
+    try {
+        // Fetch the user's document from the database
+        const userDoc = await db.get(userId);
+
+        // Delete the user's document
+        await db.remove(userDoc);
+
+        console.log(`Deleted all entries for user with ID: ${userId}`);
+    } catch (error) {
+        if (error.status === 404) {
+            console.log(`No entries found for user with ID: ${userId}`);
+        } else {
+            console.error('Error deleting entries:', error);
+        }
+    }
+}
 
 
 
@@ -106,5 +125,6 @@ async function getUserInfo(user) {
 module.exports = {
     storeHistory,
     retrieveHistory,
-    getUserInfo
+    getUserInfo,
+    deleteEntriesForUser
 };
