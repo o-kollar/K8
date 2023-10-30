@@ -1,6 +1,7 @@
 const request = require('request');
 const axios = require('axios');
 const LLM = require('../../models/GPT');
+const db = require('../../db/pouch');
 
 function callSendAPI(sender_psid, response) {
     let request_body = {
@@ -29,6 +30,7 @@ function callSendAPI(sender_psid, response) {
 
 async function handleMessage(sender_psid, received_message) {
     let response;
+    console.log(received_message)
     // Check if the message contains text
     if (received_message.text) {
         senderAction(sender_psid, 'typing_on');
@@ -67,6 +69,7 @@ async function handleMessage(sender_psid, received_message) {
         };
         callSendAPI(sender_psid, response);
     }
+    
 }
 
 function handlePostback(sender_psid, received_postback) {
@@ -74,11 +77,12 @@ function handlePostback(sender_psid, received_postback) {
 
     // Get the payload for the postback
     let payload = received_postback.payload;
-    console.log(received_postback.payload);
+    
 
     // Set the response based on the postback payload
-    if (payload === 'yes') {
-        response = { text: 'Thanks!' };
+    if (payload === 'RESET') {
+        db.deleteEntriesForUser(sender_psid)
+        response = { text: 'History Reset!' };
     } else if (payload === 'no') {
         response = { text: 'Oops, try sending another image.' };
     }
@@ -118,3 +122,6 @@ module.exports = {
     handlePostback,
     senderAction,
 };
+
+
+
