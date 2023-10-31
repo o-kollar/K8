@@ -5,16 +5,18 @@ const db = require('../db/pouch');
 const axios = require('axios');
 const { callSendAPI } = require('../chat/utils/messenger');
 
-// Get the current time in UTC
-const currentDate = new Date();
 
-// Adjust the time to UTC+8 (8 hours ahead)
-currentDate.setHours(currentDate.getHours() + 1);
 
 
 
 
 async function completions(model, input,userId) {
+    // Get the current time in UTC
+const currentDate = new Date();
+
+// Adjust the time to UTC+8 (8 hours ahead)
+currentDate.setHours(currentDate.getHours() + 1);
+
     let conversationHistory = await db.retrieveHistory(userId);
     let userInfo = await db.getUserInfo(userId);
     console.log(conversationHistory)
