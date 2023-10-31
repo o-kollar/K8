@@ -1,7 +1,7 @@
 const request = require('request');
 const axios = require('axios');
-const LLM = require('../models/GPT');
-const db = require('../db/pouch');
+const LLM = require('../../models/GPT');
+const db = require('../../db/pouch');
 
 async function handleMessage(sender_psid, received_message) {
     let response;

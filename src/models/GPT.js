@@ -3,7 +3,7 @@ const request = require('request');
 const utils = require('./utils/readFile');
 const db = require('../db/pouch');
 const axios = require('axios');
-const { callSendAPI } = require('../messenger/utils/messenger');
+const { callSendAPI } = require('../chat/utils/messenger');
 
 // Get the current time in UTC
 const currentDate = new Date();

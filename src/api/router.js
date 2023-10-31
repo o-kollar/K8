@@ -1,6 +1,6 @@
 const express = require('express');
 router = express.Router();
-MSG = require('../messenger/messenger');
+MSG = require('../chat/utils/messenger');
 
 router.post('/webhook', (req, res) => {
     let body = req.body;
