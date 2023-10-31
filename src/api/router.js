@@ -1,17 +1,15 @@
 const express = require('express');
 router = express.Router();
-MSG = require('../messenger/utils/api');
+MSG = require('../messenger/messenger');
 
 router.post('/webhook', (req, res) => {
     let body = req.body;
     if (body.object === 'page') {
         body.entry.forEach(function (entry) {
-            
             let webhook_event = entry.messaging[0];
             let sender_psid = webhook_event.sender.id;
-             if (webhook_event.message) {
+            if (webhook_event.message) {
                 try {
-                    MSG.senderAction(sender_psid, 'mark_seen');
                     MSG.handleMessage(sender_psid, webhook_event.message);
                 } catch (error) {
                     console.error('An error occurred:', error);
@@ -20,7 +18,6 @@ router.post('/webhook', (req, res) => {
                 MSG.handlePostback(sender_psid, webhook_event.postback);
             }
         });
-
         // Return a '200 OK' response to all events
         res.status(200).send('EVENT_RECEIVED');
     } else {
@@ -37,8 +34,7 @@ router.get('/webhook', (req, res) => {
     let mode = req.query['hub.mode'];
     let token = req.query['hub.verify_token'];
     let challenge = req.query['hub.challenge'];
-
-    // Check if a token and mode were sent
+     // Check if a token and mode were sent
     if (mode && token) {
         // Check the mode and token sent are correct
         if (mode === 'subscribe' && token === VERIFY_TOKEN) {

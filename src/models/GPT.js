@@ -3,7 +3,16 @@ const request = require('request');
 const utils = require('./utils/readFile');
 const db = require('../db/pouch');
 const axios = require('axios');
-const { callSendAPI } = require('../messenger/utils/api');
+const { callSendAPI } = require('../messenger/utils/messenger');
+
+// Get the current time in UTC
+const currentDate = new Date();
+
+// Adjust the time to UTC+8 (8 hours ahead)
+currentDate.setHours(currentDate.getHours() + 1);
+
+
+
 
 async function completions(model, input,userId) {
     let conversationHistory = await db.retrieveHistory(userId);
@@ -11,7 +20,7 @@ async function completions(model, input,userId) {
     console.log(conversationHistory)
     return new Promise(async (resolve, reject) => {
         utils.readTextFile('src/models/prompt/default.txt', (err, prompt) => {
-            let context = `prompt:${prompt}, user:${JSON.stringify(userInfo)} hisory:${conversationHistory}`
+            let context = `prompt:${prompt}, user:${JSON.stringify(userInfo)} hisory:${conversationHistory} time:${currentDate.toISOString()}`
             if (err) {
                 console.error('Error reading the text file:', err);
                 reject(err);

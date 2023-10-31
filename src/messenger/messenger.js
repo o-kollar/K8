@@ -1,36 +1,11 @@
 const request = require('request');
 const axios = require('axios');
-const LLM = require('../../models/GPT');
-const db = require('../../db/pouch');
-
-function callSendAPI(sender_psid, response) {
-    let request_body = {
-        recipient: {
-            id: sender_psid,
-        },
-        message: response,
-    };
-
-    const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
-    const API_URL = 'https://graph.facebook.com/v2.6/me/messages';
-
-    const params = {
-        access_token: PAGE_ACCESS_TOKEN,
-    };
-
-    axios
-        .post(API_URL, request_body, { params })
-        .then((response) => {
-            console.log('Message sent.');
-        })
-        .catch((error) => {
-            console.error('Unable to send message:', error);
-        });
-}
+const LLM = require('../models/GPT');
+const db = require('../db/pouch');
 
 async function handleMessage(sender_psid, received_message) {
     let response;
-    console.log(received_message)
+        senderAction(sender_psid, 'mark_seen');
     // Check if the message contains text
     if (received_message.text) {
         senderAction(sender_psid, 'typing_on');
@@ -40,34 +15,8 @@ async function handleMessage(sender_psid, received_message) {
         callSendAPI(sender_psid, response);
     } else if (received_message.attachments) {
         let attachment_url = received_message.attachments[0].payload.url;
-        response = {
-            attachment: {
-                type: 'template',
-                payload: {
-                    template_type: 'generic',
-                    elements: [
-                        {
-                            title: 'Is this the right picture?',
-                            subtitle: 'Tap a button to answer.',
-                            image_url: 'https://api.naga.ac/static/PAdvCrKqzdjXIbLb.png',
-                            buttons: [
-                                {
-                                    type: 'postback',
-                                    title: 'Yes!',
-                                    payload: 'yes',
-                                },
-                                {
-                                    type: 'postback',
-                                    title: 'No!',
-                                    payload: 'no',
-                                },
-                            ],
-                        },
-                    ],
-                },
-            },
-        };
-        callSendAPI(sender_psid, response);
+        
+       // callSendAPI(sender_psid, response);
     }
     
 }
@@ -113,6 +62,31 @@ function senderAction(sender_psid, action) {
         })
         .catch((error) => {
             console.error('Error sending message', error);
+        });
+}
+
+function callSendAPI(sender_psid, response) {
+    let request_body = {
+        recipient: {
+            id: sender_psid,
+        },
+        message: response,
+    };
+
+    const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
+    const API_URL = 'https://graph.facebook.com/v2.6/me/messages';
+
+    const params = {
+        access_token: PAGE_ACCESS_TOKEN,
+    };
+
+    axios
+        .post(API_URL, request_body, { params })
+        .then((response) => {
+            console.log('Message sent.');
+        })
+        .catch((error) => {
+            console.error('Unable to send message:', error);
         });
 }
 
