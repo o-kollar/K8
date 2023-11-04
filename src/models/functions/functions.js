@@ -7,7 +7,7 @@ async function fetchWeatherData(dates) {
     const latitude = 48.15;
     const longitude = 17.11;
     const hourlyData = 'temperature_2m,precipitation_probability,precipitation,weathercode';
-    const apiUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,precipitation,weathercode&hourly=${hourlyData}&start_date=${dateRange.startDate}&end_date=${dateRange.endDate}`;
+    const apiUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=${hourlyData}&start_date=${dateRange.startDate}&end_date=${dateRange.endDate}`;
 
     try {
         const response = await axios.get(apiUrl);
