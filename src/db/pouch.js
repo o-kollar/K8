@@ -101,6 +101,7 @@ async function getUserInfo(user) {
             try {
                 const response = await axios.get(url);
                 const userInfo = response.data;
+                console.log(userInfo)
 
                 // Store the user's information in the database
                 await db.put({

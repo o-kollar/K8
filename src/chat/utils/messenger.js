@@ -2,23 +2,63 @@ const request = require('request');
 const axios = require('axios');
 const LLM = require('../../models/GPT');
 const db = require('../../db/pouch');
+const functions = require('../../models/functions/functions')
 
 async function handleMessage(sender_psid, received_message) {
     let response;
-        senderAction(sender_psid, 'mark_seen');
+    senderAction(sender_psid, 'mark_seen');
     // Check if the message contains text
     if (received_message.text) {
         senderAction(sender_psid, 'typing_on');
-        response = await LLM.completions('gpt-3.5-turbo-0613', received_message, sender_psid);
-        console.log('res', response);
-        senderAction(sender_psid, 'typing_off');
+        jsonResponse = await LLM.completions('gpt-3.5-turbo-0613', received_message, sender_psid);
+
+        const textResponse = jsonResponse.choices[0].message.content;
+        db.storeHistory({ usr: received_message.text, bot: textResponse }, sender_psid);
+        console.log('res', jsonResponse);
+
+        if (jsonResponse.choices[0].finish_reason === 'function_call') {
+            const functionName = jsonResponse.choices[0].message.function_call.name;
+            const functionArguments = jsonResponse.choices[0].message.function_call.arguments;
+
+            if (jsonResponse.choices[0].message.content) {
+                console.log('message content',jsonResponse.choices[0].message.content);
+            }
+
+            if (functionName === 'generate_image') {
+                try {
+                    const imageurl = await functions.generateImage(functionArguments);
+                    response = {
+                        attachment: {
+                            type: 'image',
+                            payload: {
+                                url: imageurl,
+                                is_reusable: true,
+                            },
+                        },
+                    }
+                } catch (error) {
+                   console.log(error)
+                }
+            }
+             else if (functionName === 'get_weather_data') {
+                let weatherData = await functions.fetchWeatherData()
+                    
+                resp = await LLM.completions('gpt-3.5-turbo-0613',{text:`get_weather_data returned the following: ${JSON.stringify(weatherData)},reply to this query based on the data ${received_message}`} , sender_psid);
+                const botResponse = resp.choices[0].message.content;
+                console.log(botResponse)
+                response = {text:botResponse}
+                
+            }
+        } else {
+            senderAction(sender_psid, 'typing_off');
+            response = { text: textResponse };
+        }
         callSendAPI(sender_psid, response);
     } else if (received_message.attachments) {
         let attachment_url = received_message.attachments[0].payload.url;
-        
-       // callSendAPI(sender_psid, response);
+
+        // callSendAPI(sender_psid, response);
     }
-    
 }
 
 function handlePostback(sender_psid, received_postback) {
@@ -26,11 +66,10 @@ function handlePostback(sender_psid, received_postback) {
 
     // Get the payload for the postback
     let payload = received_postback.payload;
-    
 
     // Set the response based on the postback payload
     if (payload === 'RESET') {
-        db.deleteEntriesForUser(sender_psid)
+        db.deleteEntriesForUser(sender_psid);
         response = { text: 'History Reset!' };
     } else if (payload === 'no') {
         response = { text: 'Oops, try sending another image.' };
@@ -96,6 +135,3 @@ module.exports = {
     handlePostback,
     senderAction,
 };
-
-
-

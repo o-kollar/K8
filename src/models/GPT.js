@@ -1,28 +1,26 @@
 const { resolve } = require('path');
 const request = require('request');
 const utils = require('./utils/readFile');
+const time = require('./utils/date')
 const db = require('../db/pouch');
 const axios = require('axios');
 const { callSendAPI } = require('../chat/utils/messenger');
 
 
 
+let user;
+let query; 
 
 
 
 async function completions(model, input,userId) {
-    // Get the current time in UTC
-const currentDate = new Date();
-
-// Adjust the time to UTC+8 (8 hours ahead)
-currentDate.setHours(currentDate.getHours() + 1);
-
     let conversationHistory = await db.retrieveHistory(userId);
     let userInfo = await db.getUserInfo(userId);
     console.log(conversationHistory)
+    console.log(time.setTimestamp())
     return new Promise(async (resolve, reject) => {
         utils.readTextFile('src/models/prompt/default.txt', (err, prompt) => {
-            let context = `prompt:${prompt}, user:${JSON.stringify(userInfo)} hisory:${conversationHistory} time:${currentDate.toISOString()}`
+            let context = `prompt:${prompt}, user:${JSON.stringify(userInfo)} hisory:${conversationHistory} time:${time.setTimestamp()}`
             if (err) {
                 console.error('Error reading the text file:', err);
                 reject(err);
@@ -54,6 +52,24 @@ currentDate.setHours(currentDate.getHours() + 1);
                                 required: ['prompt'],
                             },
                         },
+                        {
+                            name: 'get_weather_data',
+                            description: 'user wants weather info',
+                            parameters: {
+                                type: 'object',
+                                properties: {
+                                    startDate: {
+                                        type: 'string',
+                                        description: 'start date in this format YYYY-MM-DD',
+                                    },
+                                    endDate: {
+                                        type: 'string',
+                                        description: 'end date in this format YYYY-MM-DD',
+                                    },
+                                },
+                                required: ['endDate'],
+                            },
+                        },
                        
                     ],
                 };
@@ -76,44 +92,7 @@ currentDate.setHours(currentDate.getHours() + 1);
                         try {
                             console.log('response body:', body);
                             const jsonResponse = JSON.parse(body);
-                            if (jsonResponse.choices[0].finish_reason === 'function_call') {
-                                const functionName = jsonResponse.choices[0].message.function_call.name;
-                                const functionArguments = jsonResponse.choices[0].message.function_call.arguments;
-                                if(jsonResponse.choices[0].message.content){
-                                    console.log(jsonResponse.choices[0].message.content)
-                                }
-                                if (functionName === 'generate_image') {
-                                    try {
-                                        const imageurl = await generateImage(functionArguments);
-                                        resolve({
-                                          
-                                                attachment:{
-                                                  type:"image", 
-                                                  payload:{
-                                                    url:imageurl, 
-                                                    is_reusable:true
-                                                  }
-                                                }
-                                              
-                                        });
-                                    } catch (error) {
-                                        reject(error);
-                                    }
-                                } else if (functionName === 'wikipedia_summary') {
-                                    getWikipediaSummary(functionArguments)
-                                    .then((summary) => {
-                                        console.log('Wikipedia Summary:', summary);
-                                    })
-                                    .catch((error) => {
-                                        console.error('Error:', error);
-                                    });
-                                }
-                            } else {
-                                const textResponse = jsonResponse.choices[0].message.content;
-                                db.storeHistory({usr:input.text,bot:textResponse},userId)
-                                resolve({ text: textResponse });
-                                
-                            }
+                            resolve(jsonResponse);
                         } catch (parseError) {
                             console.error('Error parsing JSON:', parseError);
                             reject(parseError);
@@ -123,62 +102,6 @@ currentDate.setHours(currentDate.getHours() + 1);
             }
         });
     });
-}
-
-async function generateImage(prompt) {
-    const apiUrl = 'https://api.naga.ac/v1/images/generations';
-    const accessToken = `Bearer ${process.env.NAGA_API_KEY}`;
-
-    const requestData = {
-        model: 'kandinsky-2.2',
-        prompt: prompt,
-        size: '1024x1024',
-        n: 1,
-        response_format: 'url',
-        premium: true,
-    };
-
-    const headers = {
-        accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: accessToken,
-    };
-
-    try {
-        const response = await axios.post(apiUrl, requestData, { headers });
-        console.log('image-url:', response.data.data[0].url);
-        return response.data.data[0].url;
-    } catch (error) {
-        console.error('Error making the API call:', error);
-        throw error; 
-    }
-}
-
-
-async function getWikipediaSummary(title, languageCode = 'en') {
-    try {
-        // Encode the title and language code for the URL
-        const encodedTitle = encodeURIComponent(title);
-        const encodedLanguageCode = encodeURIComponent(languageCode);
-
-        // Define the Wikipedia API URL with the encoded title and language code
-        const apiUrl = `https://${encodedLanguageCode}.wikipedia.org/w/api.php?action=query&format=json&prop=extracts&exintro=true&titles=${encodedTitle}`;
-
-        // Make the API request to Wikipedia
-        const response = await axios.get(apiUrl);
-
-        const page = Object.values(response.data.query.pages)[0];
-
-        if (page.extract) {
-            // Return the summary (extract) of the Wikipedia page
-            return page.extract;
-        } else {
-            return "No information found for the title in the specified language.";
-        }
-    } catch (error) {
-        console.error('Error querying Wikipedia API:', error);
-        throw error;
-    }
 }
 
 async function Embed(content) {
@@ -206,6 +129,11 @@ async function Embed(content) {
             throw error;
         });
 }
+
+
+
+
+
 
 
 module.exports = {
