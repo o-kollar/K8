@@ -67,7 +67,7 @@ async function completions(model, input,userId) {
                                         description: 'end date in this format YYYY-MM-DD',
                                     },
                                 },
-                                required: ['endDate'],
+                                required: ['startDate','endDate'],
                             },
                         },
                        
