@@ -46,7 +46,7 @@ async function completions(model, input,userId) {
                                 properties: {
                                     prompt: {
                                         type: 'string',
-                                        description: 'the prompt for image generating in english language',
+                                        description: 'the prompt for best result of generating the image in english language',
                                     },
                                 },
                                 required: ['prompt'],
@@ -69,17 +69,18 @@ async function completions(model, input,userId) {
                                 },
                                 required: ['startDate','endDate'],
                             },
-                        },
-                       
+                        },                  
                     ],
                 };
 
                 const options = {
                     method: 'POST',
-                    url: 'https://api.naga.ac/v1/chat/completions',
+                 //   url: 'https://api.naga.ac/v1/chat/completions',
+                    url: 'https://api.nova-oss.com/v1/chat/completions',
+                    
                     headers: {
                         'Content-Type': 'application/json',
-                        Authorization: `Bearer ${process.env.NAGA_API_KEY}`,
+                        Authorization: `Bearer ${process.env.NOVA_API_KEY}`,
                     },
                     body: JSON.stringify(requestBody),
                 };

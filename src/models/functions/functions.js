@@ -49,7 +49,13 @@ async function generateImage(prompt) {
     }
 }
 
-async function getWikipediaSummary(title, languageCode = 'en') {
+async function getWikipediaSummary(args) {
+    let title;
+    let languageCode = 'en';
+    t = JSON.parse(args)
+    title = t.title
+    languageCode = t.language
+
     try {
         // Encode the title and language code for the URL
         const encodedTitle = encodeURIComponent(title);

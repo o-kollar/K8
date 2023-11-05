@@ -6,13 +6,13 @@ const functions = require('../../models/functions/functions')
 
 async function handleMessage(sender_psid, received_message) {
     let response;
+    let textResponse;
     senderAction(sender_psid, 'mark_seen');
     // Check if the message contains text
     if (received_message.text) {
         senderAction(sender_psid, 'typing_on');
-        jsonResponse = await LLM.completions('gpt-3.5-turbo-0613', received_message, sender_psid);
-
-        const textResponse = jsonResponse.choices[0].message.content;
+        jsonResponse = await LLM.completions('gpt-4', received_message, sender_psid);
+        textResponse = jsonResponse.choices[0].message.content;
         console.log('res', jsonResponse);
 
         if (jsonResponse.choices[0].finish_reason === 'function_call') {
@@ -42,17 +42,28 @@ async function handleMessage(sender_psid, received_message) {
              else if (functionName === 'get_weather_data') {
                 let weatherData = await functions.fetchWeatherData(functionArguments)
                     
-                resp = await LLM.completions('gpt-3.5-turbo-0613',{text:`get_weather_data returned the following: ${JSON.stringify(weatherData)},reply to this query based on the data ${received_message}`} , sender_psid);
-                const botResponse = resp.choices[0].message.content;
-                console.log(botResponse)
-                response = {text:botResponse}
+                resp = await LLM.completions('gpt-4',{text:`get_weather_data returned the following: ${JSON.stringify(weatherData)},reply to this query based on the data ${received_message}`} , sender_psid);
+                textResponse = resp.choices[0].message.content;
+                
+                response = {text:textResponse}
+                
+            }
+            else if (functionName === 'search_wikipedia') {
+                
+                   
+               let wiki = await functions.getWikipediaSummary(functionArguments);
+               console.log(wiki)
+                resp = await LLM.completions('gpt-4',{text:`search_wikipedia returned the following: ${wiki}, consider this in your reply ${received_message}`} , sender_psid);
+                textResponse = resp.choices[0].message.content;
+                
+                response = {text:textResponse}
                 
             }
         } else {
-            senderAction(sender_psid, 'typing_off');
-            db.storeHistory({ usr: received_message.text, bot: textResponse }, sender_psid);
             response = { text: textResponse };
         }
+        senderAction(sender_psid, 'typing_off');
+        db.storeHistory({ usr: received_message.text, bot: textResponse }, sender_psid);
         callSendAPI(sender_psid, response);
     } else if (received_message.attachments) {
         let attachment_url = received_message.attachments[0].payload.url;
