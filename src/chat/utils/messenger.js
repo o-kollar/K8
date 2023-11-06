@@ -4,6 +4,9 @@ const LLM = require('../../models/GPT');
 const db = require('../../db/pouch');
 const functions = require('../../models/functions/functions')
 
+let model = 'gpt-3.5-turbo-16k-0613'
+
+
 async function handleMessage(sender_psid, received_message) {
     let response;
     let textResponse;
@@ -11,7 +14,7 @@ async function handleMessage(sender_psid, received_message) {
     // Check if the message contains text
     if (received_message.text) {
         senderAction(sender_psid, 'typing_on');
-        jsonResponse = await LLM.completions('gpt-4', received_message, sender_psid);
+        jsonResponse = await LLM.completions(model, received_message, sender_psid);
         textResponse = jsonResponse.choices[0].message.content;
         console.log('res', jsonResponse);
 
@@ -42,7 +45,7 @@ async function handleMessage(sender_psid, received_message) {
              else if (functionName === 'get_weather_data') {
                 let weatherData = await functions.fetchWeatherData(functionArguments)
                     
-                resp = await LLM.completions('gpt-4',{text:`get_weather_data returned the following: ${JSON.stringify(weatherData)},reply to this query based on the data ${received_message}`} , sender_psid);
+                resp = await LLM.completions(model,{text:`get_weather_data returned the following: ${JSON.stringify(weatherData)},reply to this query based on the data ${received_message}`} , sender_psid);
                 textResponse = resp.choices[0].message.content;
                 
                 response = {text:textResponse}
@@ -53,7 +56,7 @@ async function handleMessage(sender_psid, received_message) {
                    
                let wiki = await functions.getWikipediaSummary(functionArguments);
                console.log(wiki)
-                resp = await LLM.completions('gpt-4',{text:`search_wikipedia returned the following: ${wiki}, consider this in your reply ${received_message}`} , sender_psid);
+                resp = await LLM.completions(model,{text:`search_wikipedia returned the following: ${wiki}, consider this in your reply ${received_message}`} , sender_psid);
                 textResponse = resp.choices[0].message.content;
                 
                 response = {text:textResponse}
@@ -80,8 +83,13 @@ function handlePostback(sender_psid, received_postback) {
     if (payload === 'RESET') {
         db.deleteEntriesForUser(sender_psid);
         response = { text: 'History Reset!' };
-    } else if (payload === 'no') {
-        response = { text: 'Oops, try sending another image.' };
+    } else if (payload === 'SWITCH') {
+        if (model === 'gpt-3.5-turbo-16k-0613') {
+            model = 'gpt-4';
+        } else {
+            model = 'gpt-3.5-turbo-16k-0613';
+        }
+        response = { text: `Model switched to ${model}` };
     }
     // Send the message to acknowledge the postback
     callSendAPI(sender_psid, response);

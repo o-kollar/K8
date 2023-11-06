@@ -75,12 +75,14 @@ async function completions(model, input,userId) {
 
                 const options = {
                     method: 'POST',
-                 //   url: 'https://api.naga.ac/v1/chat/completions',
-                    url: 'https://api.nova-oss.com/v1/chat/completions',
-                    
+                    url: model === 'gpt-4'
+                        ? 'https://api.nova-oss.com/v1/chat/completions'
+                        : 'https://api.naga.ac/v1/chat/completions',
                     headers: {
                         'Content-Type': 'application/json',
-                        Authorization: `Bearer ${process.env.NOVA_API_KEY}`,
+                        Authorization: model === 'gpt-4'
+                            ? `Bearer ${process.env.NOVA_API_KEY}`
+                            : `Bearer ${process.env.NAGA_API_KEY}`,
                     },
                     body: JSON.stringify(requestBody),
                 };
