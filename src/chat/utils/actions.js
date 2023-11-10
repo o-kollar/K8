@@ -16,11 +16,6 @@ const
                 title: 'Obliviate !',
                 payload: 'RESET',
               },
-              {
-                type: 'postback',
-                title: 'switch',
-                payload: 'SWITCH',
-              },
             ],
           },
         ],

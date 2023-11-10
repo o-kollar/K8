@@ -25,7 +25,7 @@ async function generateImage(prompt) {
     const accessToken = `Bearer ${process.env.NAGA_API_KEY}`;
 
     const requestData = {
-        model: 'kandinsky-2.2',
+        model: 'sdxl',
         prompt: prompt,
         size: '1024x1024',
         n: 1,

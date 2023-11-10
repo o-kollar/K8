@@ -23,7 +23,8 @@ async function handleMessage(sender_psid, received_message) {
             const functionArguments = jsonResponse.choices[0].message.function_call.arguments;
 
             if (jsonResponse.choices[0].message.content) {
-                console.log('message content',jsonResponse.choices[0].message.content);
+                response = jsonResponse.choices[0].message.content;
+                callSendAPI(sender_psid,response)
             }
 
             if (functionName === 'generate_image') {
@@ -70,6 +71,22 @@ async function handleMessage(sender_psid, received_message) {
         callSendAPI(sender_psid, response);
     } else if (received_message.attachments) {
         let attachment_url = received_message.attachments[0].payload.url;
+        fetch("https://ybelkada-blip-api.hf.space/run/predict", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    data: [
+      attachment_url,
+	]
+  })})
+.then(r => r.json())
+.then(
+  r => {
+    let data = r.data[0];
+    db.storeHistory({ usr: `uploaded image of ${data}`, bot: textResponse }, sender_psid);
+  }
+)
+        console.log(attachment_url)
     }
 }
 

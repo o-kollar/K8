@@ -6,13 +6,6 @@ const db = require('../db/pouch');
 const axios = require('axios');
 const { callSendAPI } = require('../chat/utils/messenger');
 
-
-
-let user;
-let query; 
-
-
-
 async function completions(model, input,userId) {
     let conversationHistory = await db.retrieveHistory(userId);
     let userInfo = await db.getUserInfo(userId);
@@ -75,14 +68,10 @@ async function completions(model, input,userId) {
 
                 const options = {
                     method: 'POST',
-                    url: model === 'gpt-4'
-                        ? 'https://api.nova-oss.com/v1/chat/completions'
-                        : 'https://api.naga.ac/v1/chat/completions',
+                    url: `${process.env.NAGA_BASE_URL}/v1/chat/completions`,
                     headers: {
                         'Content-Type': 'application/json',
-                        Authorization: model === 'gpt-4'
-                            ? `Bearer ${process.env.NOVA_API_KEY}`
-                            : `Bearer ${process.env.NAGA_API_KEY}`,
+                        Authorization: `Bearer ${process.env.NAGA_API_KEY}`,
                     },
                     body: JSON.stringify(requestBody),
                 };
