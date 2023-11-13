@@ -3,73 +3,33 @@ const axios = require('axios');
 const LLM = require('../../models/GPT');
 const db = require('../../db/pouch');
 const functions = require('../../models/functions/functions')
+const falcon = require('../../models/utils/falcon')
 
 let model = 'gpt-3.5-turbo-16k-0613'
 
 
 async function handleMessage(sender_psid, received_message) {
+    let conversationHistory = await db.retrieveHistory(sender_psid);
+    let userInfo = await db.getUserInfo(sender_psid);
     let response;
     let textResponse;
     senderAction(sender_psid, 'mark_seen');
     // Check if the message contains text
     if (received_message.text) {
         senderAction(sender_psid, 'typing_on');
-        jsonResponse = await LLM.completions(model, received_message, sender_psid);
-        textResponse = jsonResponse.choices[0].message.content;
-        console.log('res', jsonResponse);
+        try {
+            const jsonResponse = await falcon.completion(received_message.text,userInfo,conversationHistory); // Pass the text property
+            console.log("jsonResponse:", jsonResponse);
+            textResponse = jsonResponse.text; // Assuming the text property contains the response
+            db.storeHistory({ usr: received_message.text, bot: textResponse }, sender_psid);
 
-        if (jsonResponse.choices[0].finish_reason === 'function_call') {
-            const functionName = jsonResponse.choices[0].message.function_call.name;
-            const functionArguments = jsonResponse.choices[0].message.function_call.arguments;
-
-            if (jsonResponse.choices[0].message.content) {
-                response = jsonResponse.choices[0].message.content;
-                callSendAPI(sender_psid,response)
-            }
-
-            if (functionName === 'generate_image') {
-                try {
-                    const imageurl = await functions.generateImage(functionArguments);
-                    response = {
-                        attachment: {
-                            type: 'image',
-                            payload: {
-                                url: imageurl,
-                                is_reusable: true,
-                            },
-                        },
-                    }
-                } catch (error) {
-                   console.log(error)
-                }
-            }
-             else if (functionName === 'get_weather_data') {
-                let weatherData = await functions.fetchWeatherData(functionArguments)
-                    
-                resp = await LLM.completions(model,{text:`get_weather_data returned the following: ${JSON.stringify(weatherData)},reply to this query based on the data ${received_message}`} , sender_psid);
-                textResponse = resp.choices[0].message.content;
-                
-                response = {text:textResponse}
-                
-            }
-            else if (functionName === 'search_wikipedia') {
-                
-                   
-               let wiki = await functions.getWikipediaSummary(functionArguments);
-               console.log(wiki)
-                resp = await LLM.completions(model,{text:`search_wikipedia returned the following: ${wiki}, consider this in your reply ${received_message}`} , sender_psid);
-                textResponse = resp.choices[0].message.content;
-                
-                response = {text:textResponse}
-                
-            }
-        } else {
-            response = { text: textResponse };
-        }
-        senderAction(sender_psid, 'typing_off');
-        db.storeHistory({ usr: received_message.text, bot: textResponse }, sender_psid);
-        callSendAPI(sender_psid, response);
-    } else if (received_message.attachments) {
+            senderAction(sender_psid, 'typing_off');
+            // db.storeHistory({ usr: received_message.text, bot: textResponse }, sender_psid);
+            callSendAPI(sender_psid, { text: textResponse });
+        } catch (error) {
+            console.error("Error:", error);
+            // Handle the error as needed
+        }}else if (received_message.attachments) {
         let attachment_url = received_message.attachments[0].payload.url;
         fetch("https://ybelkada-blip-api.hf.space/run/predict", {
   method: "POST",
