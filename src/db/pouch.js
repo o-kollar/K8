@@ -9,7 +9,7 @@ async function storeHistory(conv, user) {
         const existingDoc = await db.get(user);
 
         // If the user's history document already exists, update it with the new conversation
-        existingDoc.conversation.push(`user:${conv.usr},bot:${conv.bot}`);
+        existingDoc.conversation.push(`[INST] ${conv.usr}[/INST]\n${conv.bot}`);
         if (existingDoc.conversation.length > 5) {
             // Keep only the last 10 entries
             existingDoc.conversation = existingDoc.conversation.slice(-5);
@@ -24,7 +24,7 @@ async function storeHistory(conv, user) {
             const newHistory = {
                 _id: user,
                 userId: user,
-                conversation: [`user:${conv.usr},bot:${conv.bot}`],
+                conversation: [`[INST] ${conv.usr}[/INST]\n ${conv.bot}`],
             };
             await db.put(newHistory);
             console.log('New user history created:', newHistory);

@@ -2,51 +2,59 @@ const request = require('request');
 const axios = require('axios');
 const LLM = require('../../models/GPT');
 const db = require('../../db/pouch');
-const functions = require('../../models/functions/functions')
-const falcon = require('../../models/utils/falcon')
+const functions = require('../../models/functions/functions');
+const falcon = require('../../models/utils/falcon');
+const llama2 = require('../../models/llama2');
 
-let model = 'gpt-3.5-turbo-16k-0613'
-
+let model = 'gpt-3.5-turbo-16k-0613';
 
 async function handleMessage(sender_psid, received_message) {
     let conversationHistory = await db.retrieveHistory(sender_psid);
     let userInfo = await db.getUserInfo(sender_psid);
     let response;
     let textResponse;
-    senderAction(sender_psid, 'mark_seen');
+    
     // Check if the message contains text
     if (received_message.text) {
+        senderAction(sender_psid, 'mark_seen');
         senderAction(sender_psid, 'typing_on');
         try {
-            const jsonResponse = await falcon.completion(received_message.text,userInfo,conversationHistory); // Pass the text property
-            console.log("jsonResponse:", jsonResponse);
-            textResponse = jsonResponse.text; // Assuming the text property contains the response
-            db.storeHistory({ usr: received_message.text, bot: textResponse }, sender_psid);
-
+            const jsonResponse = await llama2.llama2(received_message, sender_psid); // Pass the text property
+            console.log('jsonResponse:', jsonResponse);
+            //textResponse = jsonResponse.text; // Assuming the text property contains the response
+            db.storeHistory({ usr: received_message.text, bot: jsonResponse }, sender_psid);
             senderAction(sender_psid, 'typing_off');
-            // db.storeHistory({ usr: received_message.text, bot: textResponse }, sender_psid);
-            callSendAPI(sender_psid, { text: textResponse });
+            callSendAPI(sender_psid, { text: jsonResponse });
         } catch (error) {
-            console.error("Error:", error);
+            console.error('Error:', error);
             // Handle the error as needed
-        }}else if (received_message.attachments) {
+        }
+    } else if (received_message.attachments) {
         let attachment_url = received_message.attachments[0].payload.url;
-        fetch("https://ybelkada-blip-api.hf.space/run/predict", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    data: [
-      attachment_url,
-	]
-  })})
-.then(r => r.json())
-.then(
-  r => {
-    let data = r.data[0];
-    db.storeHistory({ usr: `uploaded image of ${data}`, bot: textResponse }, sender_psid);
-  }
-)
-        console.log(attachment_url)
+
+        try {
+            const response = await fetch('https://ybelkada-blip-api.hf.space/run/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    data: [attachment_url],
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch image prediction. Status: ${response.status}`);
+            }
+
+            const predictionData = await response.json();
+            let data = predictionData.data[0];
+
+            db.storeHistory({ usr: `An image of ${data}`, bot: '' }, sender_psid);
+            console.log(attachment_url);
+            senderAction(sender_psid, 'mark_seen');
+        } catch (error) {
+            console.error('Error in image processing:', error);
+            // Handle the error as needed
+        }
     }
 }
 
