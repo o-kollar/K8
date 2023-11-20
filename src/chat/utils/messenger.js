@@ -4,7 +4,8 @@ const LLM = require('../../models/GPT');
 const db = require('../../db/pouch');
 const functions = require('../../models/functions/functions');
 const falcon = require('../../models/utils/falcon');
-const llama2 = require('../../models/llama2');
+const llama2 = require('../../models/mistral');
+const translate = require('../../models/utils/test')
 
 let model = 'gpt-3.5-turbo-16k-0613';
 
@@ -19,11 +20,26 @@ async function handleMessage(sender_psid, received_message) {
         senderAction(sender_psid, 'mark_seen');
         senderAction(sender_psid, 'typing_on');
         try {
-            const jsonResponse = await llama2.llama2(received_message, sender_psid); // Pass the text property
+            let jsonResponse
+            let tralnsation;
+            let lang = await translate.detectLanguage(received_message.text)
+            console.log(lang)
+            if (lang !== 'en'){
+                tralnsation = await translate.translateTo(received_message.text, 'en', lang);
+                console.log(tralnsation)
+                generatedText = await llama2.llama2({text:tralnsation}, sender_psid);
+                jsonResponse = await translate.translateTo(generatedText, lang, 'en');
+                db.storeHistory({ usr: tralnsation, bot: generatedText }, sender_psid);
+            }else{
+                jsonResponse = await llama2.llama2(received_message, sender_psid);
+                db.storeHistory({ usr: received_message.text, bot: jsonResponse }, sender_psid);
+            }
+             // Pass the text property
             console.log('jsonResponse:', jsonResponse);
             //textResponse = jsonResponse.text; // Assuming the text property contains the response
-            db.storeHistory({ usr: received_message.text, bot: jsonResponse }, sender_psid);
+            
             senderAction(sender_psid, 'typing_off');
+
             callSendAPI(sender_psid, { text: jsonResponse });
         } catch (error) {
             console.error('Error:', error);
