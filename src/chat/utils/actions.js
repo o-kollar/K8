@@ -16,8 +16,14 @@ const
                 title: 'Obliviate !',
                 payload: 'RESET',
               },
+              {
+                type: "postback",
+                title: "Settings",
+                payload: "SETTINGS"
+            },
             ],
           },
+          
         ],
       };
       

@@ -4,34 +4,46 @@ const LLM = require('../../models/GPT');
 const db = require('../../db/pouch');
 const functions = require('../../models/functions/functions');
 const falcon = require('../../models/utils/falcon');
-const llama2 = require('../../models/mistral');
+const mistral = require('../../models/mistral');
+const mistralNSFW = require('../../models/mistralNSFW')
 const translate = require('../../models/utils/test')
 
-let model = 'gpt-3.5-turbo-16k-0613';
+let model = 'default';
 
 async function handleMessage(sender_psid, received_message) {
     let conversationHistory = await db.retrieveHistory(sender_psid);
     let userInfo = await db.getUserInfo(sender_psid);
     let response;
     let textResponse;
-    
+
     // Check if the message contains text
     if (received_message.text) {
         senderAction(sender_psid, 'mark_seen');
         senderAction(sender_psid, 'typing_on');
         try {
-            let jsonResponse
+            let jsonResponse;
             let tralnsation;
-            let lang = await translate.detectLanguage(received_message.text)
-            console.log(lang)
-            if (lang !== 'en'){
+            let lang = await translate.detectLanguage(received_message.text);
+            console.log(lang);
+
+            if (lang !== 'en') {
                 tralnsation = await translate.translateTo(received_message.text, 'en', lang);
-                console.log(tralnsation)
-                generatedText = await llama2.llama2({text:tralnsation}, sender_psid);
-                jsonResponse = await translate.translateTo(generatedText, lang, 'en');
-                db.storeHistory({ usr: tralnsation, bot: generatedText }, sender_psid);
-            }else{
-                jsonResponse = await llama2.llama2(received_message, sender_psid);
+                console.log(tralnsation);
+
+                if (model === 'NSFW') {
+                    jsonResponse = await mistralNSFW.llama2({ text: tralnsation }, sender_psid);
+                } else {
+                    jsonResponse = await mistral.llama2({ text: tralnsation }, sender_psid);
+                }
+
+                db.storeHistory({ usr: tralnsation, bot: jsonResponse }, sender_psid);
+            } else {
+                if (model === 'NSFW') {
+                    jsonResponse = await mistralNSFW.llama2(received_message, sender_psid);
+                } else {
+                    jsonResponse = await mistral.llama2(received_message, sender_psid);
+                }
+
                 db.storeHistory({ usr: received_message.text, bot: jsonResponse }, sender_psid);
             }
              // Pass the text property
@@ -84,14 +96,38 @@ function handlePostback(sender_psid, received_postback) {
     if (payload === 'RESET') {
         db.deleteEntriesForUser(sender_psid);
         response = { text: 'History Reset!' };
-    } else if (payload === 'SWITCH') {
-        if (model === 'gpt-3.5-turbo-16k-0613') {
-            model = 'gpt-4';
-        } else {
-            model = 'gpt-3.5-turbo-16k-0613';
-        }
-        response = { text: `Model switched to ${model}` };
-    }
+    } else if (payload === 'SETTINGS') {
+       
+        response = {
+            "attachment": {
+              "type": "template",
+              "payload": {
+                "template_type": "generic",
+                "elements": [{
+                  "title": "Model Choice",
+                  "subtitle": "Select the model you'd like to chat with",
+                  "buttons": [
+                    {
+                      "type": "postback",
+                      "title": "K8 - default",
+                      "payload": "DEFAULT",
+                    },
+                    {
+                      "type": "postback",
+                      "title": "K8 - 😈 unbound",
+                      "payload": "NSFW",
+                    }
+                  ],
+                }]
+              }
+            }
+          }  
+    } else if (payload === 'DEFAULT') {
+       model = 'default'
+        response = { text: `default model set` }; }
+      else if (payload === 'NSFW') {
+            model = 'NSFW'
+            response = { text: '😈' }; }
     // Send the message to acknowledge the postback
     callSendAPI(sender_psid, response);
 }

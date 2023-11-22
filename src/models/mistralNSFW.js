@@ -8,13 +8,13 @@ async function llama2(input,userID) {
     console.log('input:',input)
     console.log('user:',userInfo)
 
+
     const requestData = {
-        prompt: `[INST]It's ${time.setTimestamp()}[/INST][INST]Hello I'm ${userInfo.first_name}[/INST],${conversationHistory}[INST]${input.text}[/INST]\n`,
-        version: 'f4e2de70d66816a838a89eeeb621910adffb0dd0baba3976c96980970978018d',
-        systemPrompt: 'You are K8, an AI assistant with a friendly demeanor. Your responses are concise, informative, and infused with a touch of humor',
-        temperature: 0.75,
+        prompt: `[INST]${input.text}[/INST]\n`,
+        version: '83b6a56e7c828e667f21fd596c338fd4f0039b46bcfa18d973e8e70e455fda70',
+        temperature: 0.1,
         topP: 0.9,
-        maxTokens: 800,
+        maxTokens: 500,
     };
 
     const url = 'https://www.llama2.ai/api';
@@ -36,8 +36,16 @@ async function llama2(input,userID) {
             },
         });
 
-        console.log(response.data);
-      //  return response.data;
+        let resultString = response.data
+        let index = resultString.indexOf("[INST]");
+        
+ 
+// Check if [INST] is found in the string
+if (index !== -1) {
+  // Remove everything after [INST]
+   resultString = resultString.substring(0, index);
+} 
+        return resultString;
     } catch (error) {
         console.error('Error in llama2:', error);
         throw error; // Rethrow the error to handle it in the calling function
